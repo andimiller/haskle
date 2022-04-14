@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import Browser
+import Browser exposing (Document)
 import Browser.Dom as Dom
 import Element exposing (Element, alignRight, centerX, centerY, column, el, fill, padding, rgb255, rgba255, row, spacing, text, width)
 import Element.Background as Background
@@ -49,7 +49,7 @@ start () =
 
 
 main =
-    Browser.element { init = start, update = update, view = view, subscriptions = subscriptions }
+    Browser.document { init = start, update = update, view = view, subscriptions = subscriptions }
 
 
 renderTarget : String -> List Guess
@@ -164,16 +164,20 @@ renderGuesses guesses =
     row [ Font.family [ Font.monospace ], Font.size 32, padding 10, spacing 7 ] (map (\guess -> renderGuess guess) guesses)
 
 
-view : State -> Html Msg
+view : State -> Document Msg
 view state =
-    Element.layout [ Font.family [ Font.monospace ], Font.size 32 ]
-        (column [ centerX, centerY ]
-            ([ row [ Font.size 64 ] [ Element.link [] { url = "https://github.com/andimiller/haskle", label = Element.text "haskle"} ], Element.text state.hint ]
-                ++ map renderGuesses state.guesses
-                ++ [ row []
-                        [ Element.html (input [ placeholder "Write guess here", id "guess-box", value state.input, onInput Update, onEnter Guess ] [])
-                        , Element.html (button [ onClick Reroll ] [ Html.text "Reroll" ])
-                        ]
-                   ]
+    { title = "haskle"
+    , body =
+        [ Element.layout [ Font.family [ Font.monospace ], Font.size 32 ]
+            (column [ centerX, centerY ]
+                ([ row [ Font.size 64 ] [ Element.link [] { url = "https://github.com/andimiller/haskle", label = Element.text "haskle" } ], Element.text state.hint ]
+                    ++ map renderGuesses state.guesses
+                    ++ [ row []
+                            [ Element.html (input [ placeholder "Write guess here", id "guess-box", value state.input, onInput Update, onEnter Guess ] [])
+                            , Element.html (button [ onClick Reroll ] [ Html.text "Reroll" ])
+                            ]
+                       ]
+                )
             )
-        )
+        ]
+    }
