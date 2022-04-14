@@ -104,11 +104,11 @@ update msg state =
             ( State target hint "" [ renderTarget target ], Cmd.none )
 
         Update guess ->
-            ( State state.word state.hint guess state.guesses, Cmd.none )
+            ( { state | input = guess }, Cmd.none )
 
         Guess ->
             if String.length state.word == String.length state.input then
-                ( State state.word state.hint "" (state.guesses ++ [ markInput state.word (Debug.log "guess" state.input) ])
+                ( { state | input = "", guesses = state.guesses ++ [ markInput state.word state.input ] }
                 , focusInput
                 )
 
