@@ -166,9 +166,9 @@ renderGuesses guesses =
 
 view : State -> Html Msg
 view state =
-    Element.layout [ centerX, centerY, Font.family [ Font.monospace ], Font.size 32 ]
+    Element.layout [ Font.family [ Font.monospace ], Font.size 32 ]
         (column [ centerX, centerY ]
-            ([ row [ Font.size 64 ] [ Element.text "haskle" ], Element.text state.hint ]
+            ([ row [ Font.size 64 ] [ Element.link [] { url = "https://github.com/andimiller/haskle", label = Element.text "haskle"} ], Element.text state.hint ]
                 ++ map renderGuesses state.guesses
                 ++ [ row []
                         [ Element.html (input [ placeholder "Write guess here", id "guess-box", value state.input, onInput Update, onEnter Guess ] [])
