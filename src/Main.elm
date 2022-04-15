@@ -2,21 +2,30 @@ module Main exposing (..)
 
 import Browser exposing (Document)
 import Browser.Dom as Dom
-import Element exposing (Element, alignRight, centerX, centerY, column, el, fill, padding, rgb255, rgba255, row, spacing, text, width)
+import Browser.Events exposing (onResize)
+import Element exposing (Device, DeviceClass(..), Element, Orientation(..), alignRight, alignTop, centerX, centerY, clipX, column, el, fill, height, maximum, modular, padding, rgb255, rgba255, row, shrink, spacing, text, width, wrappedRow)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
+import Element.Input as Input
 import Html exposing (Html, button, div, input)
 import Html.Attributes exposing (disabled, hidden, id, placeholder, value)
 import Html.Events exposing (onClick, onInput)
 import Html.Events.Extra exposing (onEnter)
+import Json.Decode as Decode
 import List exposing (map, map2, member)
+import Material.Icons.Action
+import Material.Icons.Navigation
 import Questions exposing (questions)
 import Random
 import Random.Extra exposing (sample)
 import String exposing (toList)
 import Task
 import Tuple exposing (pair)
+import Widget as Widget
+import Widget.Customize as Customize
+import Widget.Icon exposing (Icon)
+import Widget.Material as Material
 
 
 type GuessStatus
@@ -37,7 +46,9 @@ pickPuzzle =
 
 start : () -> ( State, Cmd Msg )
 start () =
-    ( State "" "" "" [] True, Random.generate Init pickPuzzle )
+    ( State "" "" "" [] True { class = Desktop, orientation = Landscape }
+    , Cmd.batch [ Random.generate Init pickPuzzle, detectSize ]
+    )
 
 
 main =
@@ -50,7 +61,7 @@ renderTarget word =
 
 
 type alias State =
-    { word : String, hint : String, input : String, guesses : List (List Guess), won : Bool }
+    { word : String, hint : String, input : String, guesses : List (List Guess), won : Bool, device : Device }
 
 
 type Msg
@@ -59,6 +70,7 @@ type Msg
     | Guess
     | Update String
     | NoOp
+    | Resize Int Int
 
 
 markLetter : List Char -> Char -> Char -> Guess
@@ -83,6 +95,11 @@ focusInput =
     Task.attempt (\_ -> NoOp) (Dom.focus "guess-box")
 
 
+detectSize : Cmd Msg
+detectSize =
+    Task.perform (\v -> Resize (truncate v.viewport.width) (truncate v.viewport.height)) Dom.getViewport
+
+
 correct guess =
     Tuple.second guess == Correct
 
@@ -101,8 +118,11 @@ update msg state =
         NoOp ->
             ( state, Cmd.none )
 
+        Resize w h ->
+            ( { state | device = Element.classifyDevice { width = w, height = w } }, Cmd.none )
+
         Init ( target, hint ) ->
-            ( State target hint "" [ renderTarget target ] False, Cmd.none )
+            ( { state | word = target, hint = hint, input = "", guesses = [ renderTarget target ], won = False }, Cmd.none )
 
         Update guess ->
             ( { state | input = guess }, Cmd.none )
@@ -127,7 +147,7 @@ update msg state =
 
 subscriptions : State -> Sub Msg
 subscriptions model =
-    Sub.none
+    onResize (\w h -> Resize w h)
 
 
 green =
@@ -170,20 +190,100 @@ renderGuess guess =
 
 renderGuesses : List Guess -> Element Msg
 renderGuesses guesses =
-    row [ Font.family [ Font.monospace ], Font.size 32, padding 10, spacing 7 ] (map (\guess -> renderGuess guess) guesses)
+    row [ Font.family [ Font.monospace ], padding 10, spacing 7 ] (map (\guess -> renderGuess guess) guesses)
+
+
+sized : DeviceClass -> Int -> Int
+sized dc s =
+    let
+        deviceFactor =
+            case dc of
+                Phone ->
+                    2
+
+                Tablet ->
+                    2
+
+                BigDesktop ->
+                    2
+
+                Desktop ->
+                    1
+    in
+    truncate (deviceFactor * toFloat s)
+
+
+onEnter : msg -> Element.Attribute msg
+onEnter msg =
+    Element.htmlAttribute
+        (Html.Events.on "keyup"
+            (Decode.field "key" Decode.string
+                |> Decode.andThen
+                    (\key ->
+                        if key == "Enter" then
+                            Decode.succeed msg
+
+                        else
+                            Decode.fail "Not the enter key"
+                    )
+            )
+        )
+
+
+theme =
+    Material.defaultPalette
+
+
+guessBox chosenTheme =
+    let
+        input =
+            Material.textInput chosenTheme
+
+        content =
+            input.content
+
+        input_elementRow =
+            input.elementRow
+
+        text =
+            input.content.text
+
+        new_text =
+            { text | elementTextInput = text.elementTextInput ++ [ Input.focusedOnLoad, Element.htmlAttribute (id "guess-box"), onEnter Guess, width fill ] }
+
+        new_content =
+            { content | text = new_text }
+    in
+    { input | content = new_content, elementRow = input_elementRow ++ [ width fill ] }
 
 
 view : State -> Document Msg
 view state =
     { title = "haskle"
     , body =
-        [ Element.layout [ Font.family [ Font.monospace ], Font.size 32 ]
-            (column [ centerX, centerY ]
-                ([ row [ Font.size 64 ] [ Element.link [] { url = "https://github.com/andimiller/haskle", label = Element.text "haskle" } ], Element.text state.hint ]
+        [ Element.layout [ Font.family [ Font.monospace ], Font.size (sized state.device.class 32) ]
+            (column
+                (if state.device.class == Desktop then
+                    [ centerX, centerY ]
+
+                 else
+                    [ height shrink, width shrink, clipX ]
+                )
+                ([ wrappedRow [ Font.size (sized state.device.class 64) ] [ Element.link [] { url = "https://github.com/andimiller/haskle", label = Element.text "haskle" } ], Element.paragraph [] [ text state.hint ] ]
                     ++ map renderGuesses state.guesses
-                    ++ [ row []
-                            [ Element.html (input [ placeholder "Write guess here", id "guess-box", value state.input, onInput Update, onEnter Guess, disabled state.won ] [])
-                            , Element.html (button [ onClick Reroll, hidden (not state.won) ] [ Html.text "Reroll" ])
+                    ++ [ row [ width fill ]
+                            [ Widget.searchInput (guessBox theme)
+                                { chips = []
+                                , placeholder = Just (Input.placeholder [] (text "guess the name"))
+                                , text = state.input
+                                , onChange = Update
+                                , label = "Guess the function name"
+                                }
+                            , if state.won then
+                                Widget.button (Material.textButton theme) { icon = Material.Icons.Action.autorenew |> Widget.Icon.materialIcons, onPress = Just Reroll, text = "Reroll" }
+
+                              else
+                                Widget.button (Material.textButton theme) { icon = Material.Icons.Navigation.arrow_upward |> Widget.Icon.materialIcons, onPress = Just Guess, text = "Guess" }
                             ]
                        ]
                 )
