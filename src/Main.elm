@@ -14,6 +14,7 @@ import Html.Events exposing (onClick, onInput)
 import Html.Events.Extra exposing (onEnter)
 import Json.Decode as Decode
 import List exposing (map, map2, member)
+import Logic exposing (..)
 import Material.Icons.Action
 import Material.Icons.Navigation
 import Questions exposing (questions)
@@ -26,17 +27,6 @@ import Widget as Widget
 import Widget.Customize as Customize
 import Widget.Icon exposing (Icon)
 import Widget.Material as Material
-
-
-type GuessStatus
-    = Correct
-    | Elsewhere
-    | Incorrect
-    | Blank
-
-
-type alias Guess =
-    ( Char, GuessStatus )
 
 
 pickPuzzle =
@@ -73,23 +63,6 @@ type Msg
     | Resize Int Int
 
 
-markLetter : List Char -> Char -> Char -> Guess
-markLetter ts t g =
-    if t == g then
-        ( g, Correct )
-
-    else if List.member g ts then
-        ( g, Elsewhere )
-
-    else
-        ( g, Incorrect )
-
-
-markInput : String -> String -> List Guess
-markInput target guess =
-    map2 (markLetter (toList target)) (toList target) (toList guess)
-
-
 focusInput : Cmd Msg
 focusInput =
     Task.attempt (\_ -> NoOp) (Dom.focus "guess-box")
@@ -98,15 +71,6 @@ focusInput =
 detectSize : Cmd Msg
 detectSize =
     Task.perform (\v -> Resize (truncate v.viewport.width) (truncate v.viewport.height)) Dom.getViewport
-
-
-correct guess =
-    Tuple.second guess == Correct
-
-
-hasWon : List Guess -> Bool
-hasWon =
-    List.all correct
 
 
 update : Msg -> State -> ( State, Cmd Msg )
