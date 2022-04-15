@@ -15,19 +15,6 @@ type GuessStatus
 type alias Guess =
     ( Char, GuessStatus )
 
-
-markLetter : List Char -> Char -> Char -> Guess
-markLetter ts t g =
-    if t == g then
-        ( g, Correct )
-
-    else if List.member g ts then
-        ( g, Elsewhere )
-
-    else
-        ( g, Incorrect )
-
-
 markCorrect : List Char -> List Char -> List Guess
 markCorrect target guesses =
     map2
@@ -85,10 +72,6 @@ markInput target guess =
     markElsewhere targetChars corrects
 
 
-correct guess =
-    Tuple.second guess == Correct
-
-
 hasWon : List Guess -> Bool
 hasWon =
-    List.all correct
+    List.all (second >> (==) Correct)
