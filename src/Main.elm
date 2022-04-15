@@ -11,6 +11,7 @@ import Html.Attributes exposing (disabled, hidden, id, placeholder, value)
 import Html.Events exposing (onClick, onInput)
 import Html.Events.Extra exposing (onEnter)
 import List exposing (map, map2, member)
+import Questions exposing (questions)
 import Random
 import Random.Extra exposing (sample)
 import String exposing (toList)
@@ -29,17 +30,8 @@ type alias Guess =
     ( Char, GuessStatus )
 
 
-wordlist =
-    [ ( "succ", "a -> a" )
-    , ( "id", "a -> a" )
-    , ( "seq", "a -> b -> b" )
-    , ( "curry", "((a, b) -> c) -> a -> b -> c" )
-    , ( "uncurry", "(a -> b -> c) -> (a, b) -> c" )
-    ]
-
-
 pickPuzzle =
-    sample wordlist
+    sample questions
         |> Random.map (Maybe.withDefault ( "hello", "world" ))
 
 
