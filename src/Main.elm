@@ -7,7 +7,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Html exposing (Html, button, div, input)
-import Html.Attributes exposing (id, placeholder, value)
+import Html.Attributes exposing (disabled, hidden, id, placeholder, value)
 import Html.Events exposing (onClick, onInput)
 import Html.Events.Extra exposing (onEnter)
 import List exposing (map, map2, member)
@@ -45,7 +45,7 @@ pickPuzzle =
 
 start : () -> ( State, Cmd Msg )
 start () =
-    ( State "" "" "" [], Random.generate Init pickPuzzle )
+    ( State "" "" "" [] True, Random.generate Init pickPuzzle )
 
 
 main =
@@ -58,7 +58,7 @@ renderTarget word =
 
 
 type alias State =
-    { word : String, hint : String, input : String, guesses : List (List Guess) }
+    { word : String, hint : String, input : String, guesses : List (List Guess), won : Bool }
 
 
 type Msg
@@ -91,6 +91,15 @@ focusInput =
     Task.attempt (\_ -> NoOp) (Dom.focus "guess-box")
 
 
+correct guess =
+    Tuple.second guess == Correct
+
+
+hasWon : List Guess -> Bool
+hasWon =
+    List.all correct
+
+
 update : Msg -> State -> ( State, Cmd Msg )
 update msg state =
     case msg of
@@ -101,14 +110,22 @@ update msg state =
             ( state, Cmd.none )
 
         Init ( target, hint ) ->
-            ( State target hint "" [ renderTarget target ], Cmd.none )
+            ( State target hint "" [ renderTarget target ] False, Cmd.none )
 
         Update guess ->
             ( { state | input = guess }, Cmd.none )
 
         Guess ->
             if String.length state.word == String.length state.input then
-                ( { state | input = "", guesses = state.guesses ++ [ markInput state.word state.input ] }
+                let
+                    newResult =
+                        markInput state.word state.input
+                in
+                ( { state
+                    | input = ""
+                    , guesses = state.guesses ++ [ newResult ]
+                    , won = hasWon newResult
+                  }
                 , focusInput
                 )
 
@@ -173,8 +190,8 @@ view state =
                 ([ row [ Font.size 64 ] [ Element.link [] { url = "https://github.com/andimiller/haskle", label = Element.text "haskle" } ], Element.text state.hint ]
                     ++ map renderGuesses state.guesses
                     ++ [ row []
-                            [ Element.html (input [ placeholder "Write guess here", id "guess-box", value state.input, onInput Update, onEnter Guess ] [])
-                            , Element.html (button [ onClick Reroll ] [ Html.text "Reroll" ])
+                            [ Element.html (input [ placeholder "Write guess here", id "guess-box", value state.input, onInput Update, onEnter Guess, disabled state.won ] [])
+                            , Element.html (button [ onClick Reroll, hidden (not state.won) ] [ Html.text "Reroll" ])
                             ]
                        ]
                 )
