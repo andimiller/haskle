@@ -20,6 +20,9 @@ import Material.Icons.Navigation
 import Questions exposing (questions)
 import Random
 import Random.Extra exposing (sample)
+import Simple.Animation as Animation exposing (Animation)
+import Simple.Animation.Animated as Animated
+import Simple.Animation.Property as P
 import String exposing (toList)
 import Task
 import Tuple exposing (pair)
@@ -145,6 +148,14 @@ statusToColour status =
             grey
 
 
+animatedUi =
+    Animated.ui
+        { behindContent = Element.behindContent
+        , htmlAttribute = Element.htmlAttribute
+        , html = Element.html
+        }
+
+
 renderGuess : Guess -> Element Msg
 renderGuess guess =
     case guess of
@@ -154,7 +165,15 @@ renderGuess guess =
 
 renderGuesses : List Guess -> Element Msg
 renderGuesses guesses =
-    row [ Font.family [ Font.monospace ], padding 10, spacing 7 ] (map (\guess -> renderGuess guess) guesses)
+    animatedUi row fadeIn [ Font.family [ Font.monospace ], padding 10, spacing 7 ] (map (\guess -> renderGuess guess) guesses)
+
+
+fadeIn : Animation
+fadeIn =
+    Animation.fromTo
+        { duration = 400, options = [] }
+        [ P.opacity 0 ]
+        [ P.opacity 1 ]
 
 
 sized : DeviceClass -> Int -> Int
