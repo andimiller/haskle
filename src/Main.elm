@@ -95,7 +95,10 @@ update msg state =
             ( { state | input = guess }, Cmd.none )
 
         Guess ->
-            if String.length state.word == String.length state.input then
+            if state.won then
+                ( state, Cmd.none )
+
+            else if String.length state.word == String.length state.input then
                 let
                     newResult =
                         markInput state.word state.input
