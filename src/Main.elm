@@ -165,15 +165,39 @@ renderGuess guess =
 
 renderGuesses : List Guess -> Element Msg
 renderGuesses guesses =
-    animatedUi row fadeIn [ Font.family [ Font.monospace ], padding 10, spacing 7 ] (map (\guess -> renderGuess guess) guesses)
+    animatedUi row fadeInFast [ Font.family [ Font.monospace ], padding 10, spacing 7 ] (map (\guess -> renderGuess guess) guesses)
 
 
-fadeIn : Animation
-fadeIn =
+fadeIn : Int -> Animation
+fadeIn speed =
     Animation.fromTo
-        { duration = 400, options = [] }
+        { duration = speed, options = [] }
         [ P.opacity 0 ]
         [ P.opacity 1 ]
+
+
+fadeInFast =
+    fadeIn 400
+
+
+fadeInSlow =
+    fadeIn 3000
+
+
+fadeOut : Int -> Animation
+fadeOut speed =
+    Animation.fromTo
+        { duration = speed, options = [] }
+        [ P.opacity 1 ]
+        [ P.opacity 0 ]
+
+
+fadeOutFast =
+    fadeOut 400
+
+
+fadeOutSlow =
+    fadeOut 3000
 
 
 sized : DeviceClass -> Int -> Int
@@ -246,13 +270,13 @@ view state =
     , body =
         [ Element.layout [ Font.family [ Font.monospace ], Font.size (sized state.device.class 32) ]
             (column
-                (if state.device.class == Desktop then
+                (if state.device.class == Desktop || state.device.class == BigDesktop then
                     [ centerX, centerY ]
 
                  else
                     [ height shrink, width shrink, clipX ]
                 )
-                ([ wrappedRow [ Font.size (sized state.device.class 64) ] [ Element.link [] { url = "https://github.com/andimiller/haskle", label = Element.text "haskle" } ], Element.paragraph [] [ text state.hint ] ]
+                ([ animatedUi wrappedRow fadeInSlow [ Font.size (sized state.device.class 64) ] [ Element.link [] { url = "https://github.com/andimiller/haskle", label = Element.text "haskle" } ], Element.paragraph [] [ text state.hint ] ]
                     ++ map renderGuesses state.guesses
                     ++ [ row [ width fill ]
                             [ Widget.searchInput (guessBox theme)
